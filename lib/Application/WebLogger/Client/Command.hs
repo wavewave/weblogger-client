@@ -1,16 +1,19 @@
 module Application.WebLogger.Client.Command where
 
+import Control.Applicative
+import Data.Configurator
+--
 import Application.WebLogger.Client.ProgType
 import Application.WebLogger.Client.Job
 import Application.WebLogger.Client.Config
-import Data.Configurator
 
+-- | 
 commandLineProcess :: WebLogger_client -> IO ()
 commandLineProcess (Create cfg mn) = do 
   putStrLn "create called"
-  mc <- getWebLoggerClientConfiguration =<< load [Required cfg] 
+  mc <- getWebLoggerConf =<< load [Required cfg] 
   maybe (error "cannot parse config") (flip startCreate mn) mc
-commandLineProcess (Get cfg n) = do 
+{- commandLineProcess (Get cfg n) = do 
   putStrLn "get called"
   mc <- getWebLoggerClientConfiguration =<< load [Required cfg] 
   maybe (error "cannot parse config") (flip startGet n) mc
@@ -21,8 +24,8 @@ commandLineProcess (Put cfg n mn) = do
 commandLineProcess (Delete cfg n) = do 
   putStrLn "delete called"
   mc <- getWebLoggerClientConfiguration =<< load [Required cfg] 
-  maybe (error "cannot parse config") (flip startDelete n) mc
+  maybe (error "cannot parse config") (flip startDelete n) mc -}
 commandLineProcess (GetList cfg) = do 
   putStrLn "getlist called"
-  mc <- getWebLoggerClientConfiguration =<< load [Required cfg] 
+  mc <- getWebLoggerConf =<< load [Required cfg] 
   maybe (error "cannot parse config") startGetList mc

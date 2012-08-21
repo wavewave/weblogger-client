@@ -21,84 +21,57 @@ import Unsafe.Coerce
 
 import Application.WebLogger.Client.Config
 import Application.WebLogger.Type
-import Data.UUID
-import Data.UUID.V5
 import qualified Data.ByteString as B
-import Data.Time.Clock
 
 type Url = String 
 
-nextUUID :: WebLoggerClientConfiguration -> IO UUID
-nextUUID mc = do 
-  let c = yesodcrudClientURL mc 
-  t <- getCurrentTime 
-  return . generateNamed namespaceURL . B.unpack . SC.pack $ c ++ "/" ++ show t 
-
-startCreate :: WebLoggerClientConfiguration -> String -> IO () 
-startCreate mc name = do 
+-- | 
+startCreate :: WebLoggerConf -> String -> IO () 
+startCreate mc cnt = do 
   putStrLn "job started"
   cwd <- getCurrentDirectory
-  let url = yesodcrudServerURL mc 
-  uuid <- nextUUID mc
-  let info = WebLoggerInfo { yesodcrud_uuid = uuid , yesodcrud_name = name } 
-  response <- yesodcrudToServer url ("uploadyesodcrud") methodPost info
+  let url = webloggerServerURL mc 
+  let info = WebLoggerInfo cnt 
+  response <- weblogger url ("upload") methodPost info
   putStrLn $ show response 
 
 
-startGet :: WebLoggerClientConfiguration -> String -> IO () 
-startGet mc idee = do 
-  putStrLn $"get " ++ idee
-  let url = yesodcrudServerURL mc 
-  r <- jsonFromServer url ("yesodcrud" </> idee) methodGet
-  putStrLn $ show r 
-
-
-startPut :: WebLoggerClientConfiguration 
-         -> String  -- ^ yesodcrud idee
-         -> String  -- ^ yesodcrud name 
-         -> IO () 
-startPut mc idee name = do 
-  putStrLn "job started"
-  cwd <- getCurrentDirectory
-  let url = yesodcrudServerURL mc 
-      info = case fromString idee of 
-               Nothing -> error "strange in startPut" 
-               Just idee' -> WebLoggerInfo { yesodcrud_uuid = idee', yesodcrud_name = name }
-  response <- yesodcrudToServer url ("yesodcrud" </> idee) methodPut info
-  putStrLn $ show response 
-
-
-startDelete :: WebLoggerClientConfiguration -> String -> IO () 
-startDelete mc idee = do 
-  putStrLn "job started"
-  let url = yesodcrudServerURL mc 
-  r <- jsonFromServer url ("yesodcrud" </> idee) methodDelete
-  putStrLn $ show r 
-
-
-startGetList :: WebLoggerClientConfiguration -> IO () 
+-- |
+startGetList :: WebLoggerConf -> IO () 
 startGetList mc = do 
   putStrLn "getlist: "
-  let url = yesodcrudServerURL mc 
-  r <- jsonFromServer url ("listyesodcrud") methodGet
+  let url = webloggerServerURL mc 
+  r <- jsonFromServer url ("list") methodGet
   putStrLn $ show r 
 
 
+-- |
 jsonFromServer :: Url -> String -> Method -> IO (Either String (Result Value))
 jsonFromServer url api mthd = do 
   request <- parseUrl (url </> api)
   withManager $ \manager -> do
     let requestjson = request { 
           method = mthd,
-          requestHeaders = [ ("Accept", "application/json; charset=utf-8") ] } 
+          requestHeaders = [ ("Accept", "application/json; charset=utf-8") ] 
+          } 
     r <- httpLbs requestjson manager 
     if statusCode (responseStatus r) == 200 
       then return . parseJson . SC.concat . C.toChunks . responseBody $ r
       else return (Left $ "status code : " ++ show (statusCode (responseStatus r))) 
 
-yesodcrudToServer :: Url -> String -> Method -> WebLoggerInfo -> IO (Either String (Result Value))
-yesodcrudToServer url api mthd mi = do 
+weblogger :: Url -> String -> Method -> WebLoggerInfo -> IO (Either String (Result Value))
+weblogger url api mthd mi = do 
   request <- parseUrl (url </> api)
+  -- debug
+  print (url </> api)
+  let mijson = E.encode (toJSON mi)
+      myrequestbody = RequestBodyLBS mijson 
+  let requestjson = request 
+        { method = mthd
+        , requestHeaders = [ ("Accept", "application/json; charset=utf-8") ]
+        , requestBody = myrequestbody } 
+  print mijson
+  -- end debug
   withManager $ \manager -> do
     let mijson = E.encode (toJSON mi)
         myrequestbody = RequestBodyLBS mijson 
