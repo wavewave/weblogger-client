@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Application.YesodCRUD.Client.Job where
+module Application.WebLogger.Client.Job where
 
 import Debug.Trace
 
@@ -19,8 +19,8 @@ import System.Directory
 import System.FilePath
 import Unsafe.Coerce
 
-import Application.YesodCRUD.Client.Config
-import Application.YesodCRUD.Type
+import Application.WebLogger.Client.Config
+import Application.WebLogger.Type
 import Data.UUID
 import Data.UUID.V5
 import qualified Data.ByteString as B
@@ -28,24 +28,24 @@ import Data.Time.Clock
 
 type Url = String 
 
-nextUUID :: YesodcrudClientConfiguration -> IO UUID
+nextUUID :: WebLoggerClientConfiguration -> IO UUID
 nextUUID mc = do 
   let c = yesodcrudClientURL mc 
   t <- getCurrentTime 
   return . generateNamed namespaceURL . B.unpack . SC.pack $ c ++ "/" ++ show t 
 
-startCreate :: YesodcrudClientConfiguration -> String -> IO () 
+startCreate :: WebLoggerClientConfiguration -> String -> IO () 
 startCreate mc name = do 
   putStrLn "job started"
   cwd <- getCurrentDirectory
   let url = yesodcrudServerURL mc 
   uuid <- nextUUID mc
-  let info = YesodcrudInfo { yesodcrud_uuid = uuid , yesodcrud_name = name } 
+  let info = WebLoggerInfo { yesodcrud_uuid = uuid , yesodcrud_name = name } 
   response <- yesodcrudToServer url ("uploadyesodcrud") methodPost info
   putStrLn $ show response 
 
 
-startGet :: YesodcrudClientConfiguration -> String -> IO () 
+startGet :: WebLoggerClientConfiguration -> String -> IO () 
 startGet mc idee = do 
   putStrLn $"get " ++ idee
   let url = yesodcrudServerURL mc 
@@ -53,7 +53,7 @@ startGet mc idee = do
   putStrLn $ show r 
 
 
-startPut :: YesodcrudClientConfiguration 
+startPut :: WebLoggerClientConfiguration 
          -> String  -- ^ yesodcrud idee
          -> String  -- ^ yesodcrud name 
          -> IO () 
@@ -63,12 +63,12 @@ startPut mc idee name = do
   let url = yesodcrudServerURL mc 
       info = case fromString idee of 
                Nothing -> error "strange in startPut" 
-               Just idee' -> YesodcrudInfo { yesodcrud_uuid = idee', yesodcrud_name = name }
+               Just idee' -> WebLoggerInfo { yesodcrud_uuid = idee', yesodcrud_name = name }
   response <- yesodcrudToServer url ("yesodcrud" </> idee) methodPut info
   putStrLn $ show response 
 
 
-startDelete :: YesodcrudClientConfiguration -> String -> IO () 
+startDelete :: WebLoggerClientConfiguration -> String -> IO () 
 startDelete mc idee = do 
   putStrLn "job started"
   let url = yesodcrudServerURL mc 
@@ -76,7 +76,7 @@ startDelete mc idee = do
   putStrLn $ show r 
 
 
-startGetList :: YesodcrudClientConfiguration -> IO () 
+startGetList :: WebLoggerClientConfiguration -> IO () 
 startGetList mc = do 
   putStrLn "getlist: "
   let url = yesodcrudServerURL mc 
@@ -96,7 +96,7 @@ jsonFromServer url api mthd = do
       then return . parseJson . SC.concat . C.toChunks . responseBody $ r
       else return (Left $ "status code : " ++ show (statusCode (responseStatus r))) 
 
-yesodcrudToServer :: Url -> String -> Method -> YesodcrudInfo -> IO (Either String (Result Value))
+yesodcrudToServer :: Url -> String -> Method -> WebLoggerInfo -> IO (Either String (Result Value))
 yesodcrudToServer url api mthd mi = do 
   request <- parseUrl (url </> api)
   withManager $ \manager -> do

@@ -2,11 +2,11 @@ module Main where
 
 import System.Console.CmdArgs
 
-import Application.YesodCRUD.Client.ProgType
-import Application.YesodCRUD.Client.Command
+import Application.WebLogger.Client.ProgType
+import Application.WebLogger.Client.Command
 
 main :: IO () 
 main = do 
-  putStrLn "yesodcrud-client"
+  putStrLn "weblogger-client"
   param <- cmdArgs mode
   commandLineProcess param
